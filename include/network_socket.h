@@ -14,5 +14,6 @@ struct client_information
 int                       client_create(uint16_t port, const char *ip);
 struct client_information socket_create(uint16_t port, const char *ip);
 int                       socket_connect(struct client_information);
+int                       handle_connection(void);
 
 #endif    // CLIENT_SERVER_CHAT_SERVICE_NETWORK_SOCKET_H
