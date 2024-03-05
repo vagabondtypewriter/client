@@ -77,11 +77,9 @@ int handle_connection(int server_socket)
     // continuously read from the server, handle accordingly
     while(running)
     {
-        uint8_t  version;
-        uint16_t content_size;
-        char     content[BUFFER_SIZE];
+        struct message new_message;
 
-        ssize_t bytes_received = read(server_socket, &version, sizeof(version));
+        ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
         if(bytes_received < 0)
         {
             perror("recv");
@@ -92,9 +90,8 @@ int handle_connection(int server_socket)
             printf("Server closed connection\n");
             running = 0;
         }
-        printf("Received version from server: %u\n", version);
 
-        bytes_received = read(server_socket, &content_size, sizeof(content_size));
+        bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
         if(bytes_received < 0)
         {
             perror("recv");
@@ -105,13 +102,12 @@ int handle_connection(int server_socket)
             printf("Server closed connection\n");
             running = 0;
         }
-        content_size = ntohs(content_size);
-        printf("Received content size from server: %u\n", content_size);
+        new_message.content_size = ntohs(new_message.content_size);
 
-        bytes_received = read(server_socket, content, content_size);
+        bytes_received = read(server_socket, new_message.content, new_message.content_size);
         if(bytes_received < 0)
         {
-            perror("recv");
+            perror("read");
             running = 0;
         }
         if(bytes_received == 0)
@@ -121,8 +117,11 @@ int handle_connection(int server_socket)
         }
         if(running)
         {
-            content[bytes_received] = '\0';
-            printf("Received content from server: %s\n", content);
+            new_message.content[bytes_received] = '\0';
+            printf("Stored in message struct: \n");
+            printf("Received version from server: %i\n", new_message.version);
+            printf("Received version from server: %i\n", new_message.content_size);
+            printf("Received content from server: %s\n", new_message.content);
         }
         running = 0;
     }
