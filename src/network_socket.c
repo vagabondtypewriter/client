@@ -6,8 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 1024
-
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
@@ -72,42 +70,62 @@ int handle_connection(int server_socket)
     // client connected
     // read/write concurrency
     // what type? -->
-    int  running = 1;
-    char buffer[BUFFER_SIZE];
+    int running = 1;
 
     printf("Handle connection\n");
 
     // continuously read from the server, handle accordingly
     while(running)
     {
-        // Read data from the server
-        ssize_t bytes_received = recv(server_socket, buffer, BUFFER_SIZE, 0);
+        uint8_t  version;
+        uint16_t content_size;
+        char     content[BUFFER_SIZE];
+
+        ssize_t bytes_received = read(server_socket, &version, sizeof(version));
         if(bytes_received < 0)
         {
             perror("recv");
-            running = 0;    // err
+            running = 0;
         }
-        else if(bytes_received == 0)
+        if(bytes_received == 0)
         {
             printf("Server closed connection\n");
-            running = 0;    // client was closed by server
+            running = 0;
         }
-        else
+        printf("Received version from server: %u\n", version);
+
+        bytes_received = read(server_socket, &content_size, sizeof(content_size));
+        if(bytes_received < 0)
         {
-            // Print received data to the console
-            printf("Received from server: %.*s\n", (int)bytes_received, buffer);
-
-            // --> parse the string using binary
-            // --> 3 bits for version, 6 bits for content size, then content
-
+            perror("recv");
+            running = 0;
         }
+        if(bytes_received == 0)
+        {
+            printf("Server closed connection\n");
+            running = 0;
+        }
+        content_size = ntohs(content_size);
+        printf("Received content size from server: %u\n", content_size);
+
+        bytes_received = read(server_socket, content, content_size);
+        if(bytes_received < 0)
+        {
+            perror("recv");
+            running = 0;
+        }
+        if(bytes_received == 0)
+        {
+            printf("Server closed connection\n");
+            running = 0;
+        }
+        if(running)
+        {
+            content[bytes_received] = '\0';
+            printf("Received content from server: %s\n", content);
+        }
+        running = 0;
     }
 
     return 1;
 }
-
-// todo handle the following:
-//      - msg send
-//      - msg rec
-//      - commands
-//      - username

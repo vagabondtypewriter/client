@@ -22,11 +22,12 @@ static void sigint_handler(int signum)
 int main(void)
 {
     struct sockaddr_in address;
-    int                opt     = 1;
-    int                addrlen = sizeof(address);
-    //    char               buffer[BUFFER_SIZE];
-    const char *message = "001000005Hello";
-
+    int                opt          = 1;
+    int                addrlen      = sizeof(address);
+    uint8_t            version      = 1;
+    const char        *message      = "Hello";
+    uint16_t           content_size = (uint16_t)strlen(message);
+    uint16_t           content_size_network;
     // Register SIGINT handler
     signal(SIGINT, sigint_handler);
 
@@ -73,11 +74,18 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-    // Send a message to the client
+    // Send version to client
+    send(new_socket, &version, sizeof(version), 0);
 
-    // Send a binary message to the client
+    // Convert content size to network byte order (big-endian)
+    content_size_network = htons(content_size);
+
+    // Send content size to client
+    send(new_socket, &content_size_network, sizeof(content_size_network), 0);
+
+    // Send message to the client
     send(new_socket, message, strlen(message), 0);
-    printf("Binary message sent to client: %s\n", message);
+    printf("Message sent to client: %s\n", message);
 
     // Close the server after sending the message
     close(new_socket);

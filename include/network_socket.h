@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <sys/socket.h>
 
+#define BUFFER_SIZE 1024
+
 struct client_information
 {
     int                fd;
@@ -15,7 +17,7 @@ struct message
 {
     uint8_t  version;
     uint16_t content_size;
-    char    *message;
+    char     content[BUFFER_SIZE - 3];    // Subtracting 3 for version and content_size
 };
 
 int                       client_create(uint16_t port, const char *ip);
