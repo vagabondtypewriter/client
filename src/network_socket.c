@@ -6,9 +6,14 @@
 #include <string.h>
 #include <unistd.h>
 
-int client_create(void)
+int client_create(uint16_t port, const char *ip)
 {
-    printf("FROM network_socket.C\n");
+    struct client_information client;
+    printf("FROM network_socket.C %i %s\n", port, ip);
+    //
+    //     create socket
+    client = socket_create(port, ip);
+    printf("Client fd: %i\n", client.fd);
     return 1;
 }
 

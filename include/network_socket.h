@@ -11,7 +11,7 @@ struct client_information
     struct sockaddr_in serverAddr;
 };
 
-int                       client_create(void);
+int                       client_create(uint16_t port, const char *ip);
 struct client_information socket_create(uint16_t port, const char *ip);
 int                       socket_connect(struct client_information);
 
