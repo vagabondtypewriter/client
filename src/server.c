@@ -8,7 +8,7 @@
 
 #define PORT 8080
 #define MAX_PENDING_CONNECTIONS 5
-#define BUFFER_SIZE 1024
+// #define BUFFER_SIZE 1024
 
 static int server_fd;      // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static int new_socket;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -22,10 +22,10 @@ static void sigint_handler(int signum)
 int main(void)
 {
     struct sockaddr_in address;
-    int                opt                 = 1;
-    int                addrlen             = sizeof(address);
-    char               buffer[BUFFER_SIZE] = {0};
-    const char        *hello               = "Hello from server";
+    int                opt     = 1;
+    int                addrlen = sizeof(address);
+    //    char               buffer[BUFFER_SIZE];
+    const char *message = "001000005Hello";
 
     // Register SIGINT handler
     signal(SIGINT, sigint_handler);
@@ -74,21 +74,12 @@ int main(void)
     }
 
     // Send a message to the client
-    send(new_socket, hello, strlen(hello), 0);
-    printf("Hello message sent to client\n");
 
-    // Continuous loop for reading input and sending it to the client
-    printf("Enter text to send to the client (Ctrl+C to exit):\n");
-    while(running == 1)
-    {
-        // Read input from the keyboard
-        fgets(buffer, BUFFER_SIZE, stdin);
+    // Send a binary message to the client
+    send(new_socket, message, strlen(message), 0);
+    printf("Binary message sent to client: %s\n", message);
 
-        // Send input to the client
-        send(new_socket, buffer, strlen(buffer), 0);
-    }
-
-    // Cleanup before exiting
+    // Close the server after sending the message
     close(new_socket);
     close(server_fd);
 

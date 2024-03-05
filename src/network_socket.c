@@ -6,6 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define BUFFER_SIZE 1024
+
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
@@ -15,7 +17,11 @@ int client_create(uint16_t port, const char *ip)
     client = socket_create(port, ip);
     if(socket_connect(client))
     {
-        handle_connection();
+        handle_connection(client.fd);
+    }
+    else
+    {
+        return -1;
     }
     printf("Client fd: %i\n", client.fd);
     return 1;
@@ -61,12 +67,42 @@ int socket_connect(struct client_information client)
     return 1;
 }
 
-int handle_connection(void)
+int handle_connection(int server_socket)
 {
     // client connected
     // read/write concurrency
     // what type? -->
+    int  running = 1;
+    char buffer[BUFFER_SIZE];
+
     printf("Handle connection\n");
+
+    // continuously read from the server, handle accordingly
+    while(running)
+    {
+        // Read data from the server
+        ssize_t bytes_received = recv(server_socket, buffer, BUFFER_SIZE, 0);
+        if(bytes_received < 0)
+        {
+            perror("recv");
+            running = 0;    // err
+        }
+        else if(bytes_received == 0)
+        {
+            printf("Server closed connection\n");
+            running = 0;    // client was closed by server
+        }
+        else
+        {
+            // Print received data to the console
+            printf("Received from server: %.*s\n", (int)bytes_received, buffer);
+
+            // --> parse the string using binary
+            // --> 3 bits for version, 6 bits for content size, then content
+
+        }
+    }
+
     return 1;
 }
 
