@@ -79,24 +79,23 @@ int handle_args(struct arguments passedArgs)
     uint16_t confirmed_port;
     char    *endptr;
     long     tmp_port;
-    // convert using strtol
+
     tmp_port = strtol(passedArgs.port, &endptr, BASE);
 
-    // Check for invalid input
     if(endptr == passedArgs.port)
     {
-        fprintf(stderr, "No digits were found\n");
-        return EXIT_FAILURE;
+        perror("No digits were found\n");
+        return -1;
     }
 
     // Check for out-of-range values
     if(tmp_port < 0 || tmp_port > UINT16_MAX)
     {
-        fprintf(stderr, "Value out of range for uint16_t\n");
-        return EXIT_FAILURE;
+        perror("Value out of range for uint16_t\n");
+        return -1;
     }
 
-    // convert  to uint16_t
+    // convert to uint16_t
     confirmed_port = (uint16_t)tmp_port;
     printf("confirmed port: %i\n", confirmed_port);
     printf("%s\n", passedArgs.ip);
