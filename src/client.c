@@ -9,6 +9,14 @@
 #define USAGE "Usage: -t type -i ip -p port\n"
 #define BASE 10
 
+/**
+ * TODO
+ * HANDLE SEND/REC MSGS
+ * START GUI
+ * dup2 to redir input from the server to the GUI(?) << may be unecessary
+ * Display messages on the gui
+ */
+
 // struct to hold the values for
 struct arguments
 {
@@ -26,9 +34,7 @@ int main(int argc, char *argv[])
     // parse arguments
     if(handle_args(parse_args(argc, argv)))
     {
-        // parsed, handled within handle_args
-        // handles fail state
-        // todo START GUI
+        // only runs when client is created and connected: i.e:
         gui_test();
     }
     // exit back to menu??
@@ -40,7 +46,6 @@ struct arguments parse_args(int argc, char *argv[])
     int              opt;
     struct arguments newArgs;
 
-    // Set default values
     newArgs.ip   = NULL;
     newArgs.port = NULL;
 
@@ -60,7 +65,6 @@ struct arguments parse_args(int argc, char *argv[])
         }
     }
 
-    // Check if required options are provided
     if(newArgs.ip == NULL || newArgs.port == NULL)
     {
         fprintf(stderr, USAGE);
@@ -92,13 +96,15 @@ int handle_args(struct arguments passedArgs)
         return EXIT_FAILURE;
     }
 
-    // Convert the long integer to uint16_t
+    // convert  to uint16_t
     confirmed_port = (uint16_t)tmp_port;
     printf("confirmed port: %i\n", confirmed_port);
     printf("%s\n", passedArgs.ip);
-    // assuming args were successfully parsed:
-    // --> start client with the correct args
-    client_create(confirmed_port, passedArgs.ip);
-    // return
-    return 1;
+
+    // checks to see if the client is successfully created/connected
+    if(client_create(confirmed_port, passedArgs.ip) == 1)
+    {
+        return 1;
+    }
+    return -1;
 }
