@@ -67,14 +67,10 @@ int socket_connect(struct client_information client)
 
 int handle_connection(int server_socket)
 {
-    // client connected
-    // read/write concurrency
-    // what type? -->
     int running = 1;
 
     printf("Handle connection\n");
 
-    // continuously read from the server, handle accordingly
     while(running)
     {
         struct message new_message;
