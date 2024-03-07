@@ -1,8 +1,9 @@
 #include "../include/gui.h"
 #include "../include/network_socket.h"
-#include <asm-generic/errno.h>
+// #include <asm-generic/errno.h>
 #include <getopt.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -35,7 +36,7 @@ int main(int argc, char *argv[])
     if(handle_args(parse_args(argc, argv)))
     {
         // only runs when client is created and connected: i.e:
-        gui_test();
+        //        gui_test();
     }
     // exit back to menu??
     return EXIT_SUCCESS;

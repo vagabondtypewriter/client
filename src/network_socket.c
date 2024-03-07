@@ -1,16 +1,20 @@
 #include "../include/network_socket.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+void *receive_messages(void *socket_fd);
+void *send_messages(void *socket_fd);
+
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
     printf("FROM network_socket.C %i %s\n", port, ip);
-    //
+
     //     create socket
     client = socket_create(port, ip);
     if(socket_connect(client))
@@ -32,6 +36,7 @@ struct client_information socket_create(uint16_t port, const char *ip)
     struct client_information newClient;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
     if(sockfd == -1)
     {
         perror("Socket creation failed");
@@ -65,66 +70,121 @@ int socket_connect(struct client_information client)
     return 1;
 }
 
+//
+
 int handle_connection(int server_socket)
 {
-    // client connected
-    // read/write concurrency
-    // what type? -->
-    int running = 1;
+    pthread_t receive_thread;
+    pthread_t send_thread;
 
-    printf("Handle connection\n");
+    // Create threads for receiving and sending messages
+    if(pthread_create(&receive_thread, NULL, receive_messages, (void *)&server_socket))
+    {
+        perror("Could not create receive thread");
+        exit(EXIT_FAILURE);
+    }
 
-    // continuously read from the server, handle accordingly
+    if(pthread_create(&send_thread, NULL, send_messages, (void *)&server_socket))
+    {
+        perror("Could not create send thread");
+        exit(EXIT_FAILURE);
+    }
+
+    // Wait for threads to finish
+    pthread_join(receive_thread, NULL);
+    pthread_join(send_thread, NULL);
+
+    return 1;
+}
+
+void *receive_messages(void *socket_fd)
+{
+    int server_socket = *((int *)socket_fd);
+    int running       = 1;
+
     while(running)
     {
         struct message new_message;
 
+        // Read the message version
         ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
-        if(bytes_received < 0)
+        if(bytes_received <= 0)
         {
-            perror("recv");
-            running = 0;
-        }
-        if(bytes_received == 0)
-        {
-            printf("Server closed connection\n");
-            running = 0;
+            if(bytes_received < 0)
+            {
+                perror("recv");
+            }
+            else
+            {
+                printf("Server closed connection\n");
+            }
+            break;
         }
 
+        // Read the message content size
         bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
-        if(bytes_received < 0)
+        if(bytes_received <= 0)
         {
-            perror("recv");
-            running = 0;
+            if(bytes_received < 0)
+            {
+                perror("recv");
+            }
+            else
+            {
+                printf("Server closed connection\n");
+            }
+            break;
         }
-        if(bytes_received == 0)
-        {
-            printf("Server closed connection\n");
-            running = 0;
-        }
-        new_message.content_size = ntohs(new_message.content_size);
+        new_message.content_size = ntohs(new_message.content_size);    // Ensure network to host short conversion
 
+        // Read the message content based on the received size
         bytes_received = read(server_socket, new_message.content, new_message.content_size);
-        if(bytes_received < 0)
+        if(bytes_received <= 0)
         {
-            perror("read");
-            running = 0;
+            if(bytes_received < 0)
+            {
+                perror("read");
+            }
+            else
+            {
+                printf("Server closed connection\n");
+            }
+            break;
         }
-        if(bytes_received == 0)
-        {
-            printf("Server closed connection\n");
-            running = 0;
-        }
-        if(running)
+
+        // Null terminate the received string
+        if(bytes_received < BUFFER_SIZE)
         {
             new_message.content[bytes_received] = '\0';
-            printf("Stored in message struct: \n");
-            printf("Received version from server: %i\n", new_message.version);
-            printf("Received version from server: %i\n", new_message.content_size);
-            printf("Received content from server: %s\n", new_message.content);
         }
-        running = 0;
+        else
+        {
+            // Ensure the buffer is null-terminated in case of full buffer
+            new_message.content[BUFFER_SIZE - 1] = '\0';
+        }
+
+        // Print the received message
+//        printf("Received message:\n");
+//        printf("Version: %u\n", new_message.version);
+//        printf("Content Size: %u\n", new_message.content_size);
+//        printf("Content: %s\n", new_message.content);
     }
 
-    return 1;
+    // Close the socket and cleanup if necessary
+    // close(server_socket);
+    return NULL;
+}
+
+void *send_messages(void *socket_fd)
+{
+    int  server_socket = *((int *)socket_fd);
+    char message[BUFFER_SIZE];    // Assuming BUFFER_SIZE is defined
+
+    while(1)
+    {
+        printf("Enter message: ");
+        fgets(message, BUFFER_SIZE, stdin);
+        // Exit loop condition or continue to send messages
+        write(server_socket, message, strlen(message));
+    }
 }
