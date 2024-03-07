@@ -3,6 +3,7 @@
 #include <asm-generic/errno.h>
 #include <getopt.h>
 #include <limits.h>
+#include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,6 +32,7 @@ int handle_args(struct arguments args);
 
 int main(int argc, char *argv[])
 {
+    gui_start();
     // parse arguments
     if(handle_args(parse_args(argc, argv)))
     {
