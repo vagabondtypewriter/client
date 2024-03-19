@@ -35,7 +35,13 @@ struct client_information socket_create(uint16_t port, const char *ip)
     struct sockaddr_in        server_addr;
     struct client_information newClient;
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+#ifndef SOCK_CLOEXEC
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-macros"
+    #define SOCK_CLOEXEC 0
+    #pragma GCC diagnostic pop
+#endif
+    sockfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 
     if(sockfd == -1)
     {
@@ -100,9 +106,9 @@ int handle_connection(int server_socket)
 void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
-    int running       = 1;
+    //    int running       = 1;
 
-    while(running)
+    while(1)
     {
         struct message new_message;
 
@@ -163,11 +169,11 @@ void *receive_messages(void *socket_fd)
             new_message.content[BUFFER_SIZE - 1] = '\0';
         }
 
-        // Print the received message
-//        printf("Received message:\n");
-//        printf("Version: %u\n", new_message.version);
-//        printf("Content Size: %u\n", new_message.content_size);
-//        printf("Content: %s\n", new_message.content);
+        //         Print the received message
+        printf("Received message:\n");
+        printf("Version: %u\n", new_message.version);
+        printf("Content Size: %u\n", new_message.content_size);
+        printf("Content: %s\n", new_message.content);
     }
 
     // Close the socket and cleanup if necessary
