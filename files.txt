@@ -1,2 +1,3 @@
 client src/client.c src/network_socket.c include/network_socket.h src/gui.c include/gui.h
-client2 src/main.c src/display.c include/display.h
+test_server src/server.c src/server.h
+
