@@ -110,7 +110,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define PORT 8079
+#define PORT 1000
 #define MAX_PENDING_CONNECTIONS 5
 #define BUFFER_SIZE 1024
 
