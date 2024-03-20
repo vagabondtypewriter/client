@@ -34,6 +34,7 @@ int gui_main(void)
     {
         int ch;
         // Print menu items
+        box(menu_win, 0, 0);
         for(int i = 0; i < 4; i++)
         {
             if(i == current_option)
@@ -49,6 +50,7 @@ int gui_main(void)
 
         wrefresh(menu_win);
         ch = wgetch(menu_win);
+        wclear(menu_win);
         switch(ch)
         {
             case 'w':
@@ -64,7 +66,11 @@ int gui_main(void)
                 endwin();
                 return 0;
             case 'e':
-                mvwprintw(menu_win, HEIGHT / 2, (WIDTH - strlen("Enter key has been hit")) / 2, "Enter key has been hit");
+                // Print the selected option
+                mvwprintw(menu_win, HEIGHT / 2, (WIDTH - strlen("Selected ")) / 2, "Selected ");
+                wattron(menu_win, A_BOLD);    // Enable bold text
+                wprintw(menu_win, "%s", options[current_option]);
+                wattroff(menu_win, A_BOLD);    // Disable bold text
                 wrefresh(menu_win);
                 break;
             default:
