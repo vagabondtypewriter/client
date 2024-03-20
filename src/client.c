@@ -30,14 +30,19 @@ struct arguments parse_args(int argc, char *argv[]);
 // starts server or connects client to server
 int handle_args(struct arguments args);
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
+    // start GUI
+    gui_main();
+    // display each argv?
+    printf("Argc: %i\n", argc);
+    printf("Argv: %s\n", argv[0]);
     // parse arguments
-    if(handle_args(parse_args(argc, argv)))
-    {
-        // only runs when client is created and connected: i.e:
-        //        gui_test();
-    }
+    //    if(handle_args(parse_args(argc, argv)))
+    //    {
+    // only runs when client is created and connected: i.e:
+    //        gui_test();
+    //    }
     // exit back to menu??
     return EXIT_SUCCESS;
 }
