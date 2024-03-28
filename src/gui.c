@@ -63,8 +63,8 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
                 break;
             case 'q':
                 delwin(menu_win);
-                endwin();
-                break;
+                endwin();    // Add this line to clean up ncurses
+                exit(EXIT_SUCCESS);
             case '\n':    // Enter key
                 switch(current_option)
                 {
