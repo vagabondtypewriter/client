@@ -13,9 +13,8 @@ void *send_messages(void *socket_fd);
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
-    printf("FROM network_socket.C %i %s\n", port, ip);
+    printf("Connecting to: %i %s\n", port, ip);
 
-    //     create socket
     client = socket_create(port, ip);
     if(socket_connect(client))
     {
@@ -151,7 +150,6 @@ void *receive_messages(void *socket_fd)
         if(running)
         {
             new_message.content[bytes_received] = '\0';
-            //            printf("Stored in message struct: \n");
             printf("Received version from server: %i\n", new_message.version);
             printf("Received version from server: %i\n", new_message.content_size);
             printf("Received content from server: %s\n", new_message.content);
@@ -164,25 +162,21 @@ void *receive_messages(void *socket_fd)
 
 void *send_messages(void *socket_fd)
 {
-    int server_socket = *((int *)socket_fd);
-    //    char           message[BUFFER_SIZE];
+    int            server_socket = *((int *)socket_fd);
     struct message msg;
 
     while(1)
     {
+        uint16_t message_len;
         printf("Enter message:\n");
         if(fgets(msg.content, BUFFER_SIZE, stdin) == NULL)
         {
-            // Handle error or end of input
             break;
         }
-        //        fgets(message, BUFFER_SIZE, stdin);
-        // Exit loop condition or continue to send messages
-        //        write(server_socket, message, strlen(message));
 
         msg.version = 1;
 
-        uint16_t message_len = (uint16_t)strlen(msg.content);
+        message_len = (uint16_t)strlen(msg.content);
         printf("%hu\n", message_len);
 
         if(msg.content[message_len - 1] == '\n')
@@ -190,7 +184,6 @@ void *send_messages(void *socket_fd)
             msg.content[message_len - 1] = '\0';
         }
 
-        // Ensure the message doesn't exceed maximum allowed content size
         if(message_len > BUFFER_SIZE - 1)
         {
             printf("Error: Message exceeds maximum allowed size.\n");

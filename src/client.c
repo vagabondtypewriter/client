@@ -1,110 +1,57 @@
 #include "../include/gui.h"
 #include "../include/network_socket.h"
-// #include <asm-generic/errno.h>
-#include <getopt.h>
+#include <errno.h>
 #include <limits.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define USAGE "Usage: -t type -i ip -p port\n"
-#define BASE 10
+#define IP1 "10.0.0.236"
+#define PORT1 "8080"
+#define IP2 "1.0.0.1"
+#define PORT2 "9090"
+#define IP3 "1.1.0.1"
+#define PORT3 "9190"
 
-/**
- * TODO
- * HANDLE SEND/REC MSGS
- * START GUI
- * dup2 to redir input from the server to the GUI(?) << may be unecessary
- * Display messages on the gui
- */
+#define BASE10 10
 
-// struct to hold the values for
-struct arguments
+int main(void)
 {
-    char *ip;
-    char *port;
-};
+    ServerInfo  server;
+    char       *endptr;
+    uint16_t    port;
+    long        port_long;
+    const char *serverIPs[]   = {IP1, IP2, IP3};
+    const char *serverPorts[] = {PORT1, PORT2, PORT3};
+    server                    = gui_main(3, serverIPs, serverPorts);
+    port_long                 = strtol(server.port, &endptr, BASE10);
+    // Parse port string to an integer
 
-// checks that arguments are expected
-struct arguments parse_args(int argc, char *argv[]);
-// starts server or connects client to server
-int handle_args(struct arguments args);
-
-int main(int argc, char *argv[])
-{
-    // parse arguments
-    if(handle_args(parse_args(argc, argv)))
+    // Check for conversion errors
+    if((errno == ERANGE && (port_long == LONG_MAX || port_long == LONG_MIN)) || (errno != 0 && port_long == 0))
     {
-        // only runs when client is created and connected: i.e:
-        //        gui_test();
-    }
-    // exit back to menu??
-    return EXIT_SUCCESS;
-}
-
-struct arguments parse_args(int argc, char *argv[])
-{
-    int              opt;
-    struct arguments newArgs;
-
-    newArgs.ip   = NULL;
-    newArgs.port = NULL;
-
-    while((opt = getopt(argc, argv, "i:p:")) != -1)
-    {
-        switch(opt)
-        {
-            case 'i':
-                newArgs.ip = optarg;
-                break;
-            case 'p':
-                newArgs.port = optarg;
-                break;
-            default:
-                fprintf(stderr, USAGE);
-                exit(EXIT_FAILURE);
-        }
-    }
-
-    if(newArgs.ip == NULL || newArgs.port == NULL)
-    {
-        fprintf(stderr, USAGE);
-        exit(EXIT_FAILURE);
-    }
-
-    return newArgs;
-}
-
-int handle_args(struct arguments passedArgs)
-{
-    uint16_t confirmed_port;
-    char    *endptr;
-    long     tmp_port;
-
-    tmp_port = strtol(passedArgs.port, &endptr, BASE);
-
-    if(endptr == passedArgs.port)
-    {
-        perror("No digits were found\n");
-        return -1;
+        perror("strtol");
+        return EXIT_FAILURE;
     }
 
     // Check for out-of-range values
-    if(tmp_port < 0 || tmp_port > UINT16_MAX)
+    if(port_long < 0 || port_long > UINT16_MAX)
     {
-        perror("Value out of range for uint16_t\n");
-        return -1;
+        fprintf(stderr, "Port number out of range for uint16_t\n");
+        return EXIT_FAILURE;
     }
 
-    // convert to uint16_t
-    confirmed_port = (uint16_t)tmp_port;
-    printf("confirmed port: %i\n", confirmed_port);
-    printf("%s\n", passedArgs.ip);
+    // Convert to uint16_t
+    port = (uint16_t)port_long;
 
-    // checks to see if the client is successfully created/connected
-    if(client_create(confirmed_port, passedArgs.ip) == 1)
+    // Check if client is successfully created/connected
+    if(client_create(port, server.ip_address) == 1)
     {
-        return 1;
+        printf("Success\n");
     }
-    return -1;
+    else
+    {
+        printf("Failed to create client\n");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

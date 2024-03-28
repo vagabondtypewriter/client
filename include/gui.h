@@ -5,6 +5,14 @@
 #ifndef CLIENT_SERVER_CHAT_SERVICE_GUI_H
 #define CLIENT_SERVER_CHAT_SERVICE_GUI_H
 
-int gui_test(void);
+typedef struct
+{
+    const char *ip_address;
+    const char *port;
+} ServerInfo;
+
+int        gui_test(void);
+ServerInfo gui_main(int numServers, const char *servers[], const char *ports[]);
+ServerInfo gui_server_list(int numServers, const char *servers[], const char *ports[]);
 
 #endif    // CLIENT_SERVER_CHAT_SERVICE_GUI_H
