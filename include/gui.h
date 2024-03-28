@@ -13,6 +13,6 @@ typedef struct
 
 int        gui_test(void);
 ServerInfo gui_main(int numServers, const char *servers[], const char *ports[]);
-ServerInfo gui_server_list(int numServers, const char *servers[], const char *ports[]);
+int        gui_server_list(int numServers, const char *servers[], const char *ports[]);
 
 #endif    // CLIENT_SERVER_CHAT_SERVICE_GUI_H
