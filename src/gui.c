@@ -4,10 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define HEIGHT 30
-#define WIDTH 100
-#define BEGIN_Y 0
-#define BEGIN_X 0
+// #define INPUT_HEIGHT 5
 
 int gui_test(void)
 {
@@ -56,32 +53,33 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
         mvwprintw(menu_win, HEIGHT - 1, 2, "Pressed key: %d", ch);    // Print pressed key
         switch(ch)
         {
-            case 'w':    // w
+            case 'w':
                 current_option = (current_option - 1 + 4) % 4;
                 break;
-            case 's':    // s
+            case 's':
                 current_option = (current_option + 1) % 4;
                 break;
             case 'q':
                 delwin(menu_win);
-                endwin();    // Add this line to clean up ncurses
+                endwin();
                 exit(EXIT_SUCCESS);
-            case '\n':    // Enter key
+            case '\n':    // enter
                 switch(current_option)
                 {
-                    case 0:    // join
+                    case 0:
                         wclear(menu_win);
                         wrefresh(menu_win);
                         endwin();
                         res = gui_server_list(numServers, servers, ports);
                         if(res != -1)
                         {
-                            // return
                             selected_server.ip_address = servers[res];
                             selected_server.port       = ports[res];
+                            werase(menu_win);
+                            refresh();
+                            endwin();
                             return selected_server;
                         }
-                        // else back (re-init)
                         initscr();
                         cbreak();
                         noecho();
@@ -123,7 +121,7 @@ int gui_server_list(int numServers, const char *servers[], const char *ports[])
         int ch;
         box(menu_win, 0, 0);
         for(int i = 0; i < numServers + 1; i++)
-        {    // Increase the loop range to include the back option
+        {
             if(i == current_option)
             {
                 wattron(menu_win, A_STANDOUT);
@@ -145,7 +143,7 @@ int gui_server_list(int numServers, const char *servers[], const char *ports[])
         wrefresh(menu_win);
         ch = wgetch(menu_win);
         wclear(menu_win);
-        mvwprintw(menu_win, HEIGHT - 1, 2, "Pressed key: %d", ch);    // Print pressed key
+        mvwprintw(menu_win, HEIGHT - 1, 2, "Pressed key: %d", ch);
         switch(ch)
         {
             case 'w':    // w
@@ -154,7 +152,7 @@ int gui_server_list(int numServers, const char *servers[], const char *ports[])
             case 's':    // s
                 current_option = (current_option + 1) % (numServers + 1);
                 break;
-            case '\n':    // Enter key
+            case '\n':    // enter
                 if(current_option < numServers)
                 {
                     delwin(menu_win);
@@ -173,4 +171,18 @@ int gui_server_list(int numServers, const char *servers[], const char *ports[])
                 break;
         }
     }
+}
+
+void display_output(WINDOW *output_win, const char *message)
+{
+    werase(output_win);
+    mvwprintw(output_win, 1, 1, "%s", message);
+    wrefresh(output_win);
+}
+
+void display_input(WINDOW *input_win, const char *prompt)
+{
+    werase(input_win);
+    mvwprintw(input_win, 1, 1, "%s", prompt);
+    wrefresh(input_win);
 }

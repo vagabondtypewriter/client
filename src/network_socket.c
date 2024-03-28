@@ -7,9 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-void *receive_messages(void *socket_fd);
-void *send_messages(void *socket_fd);
-
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
