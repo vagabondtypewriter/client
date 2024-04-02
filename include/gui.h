@@ -16,7 +16,7 @@
 typedef struct
 {
     const char *ip_address;
-    const char *port;
+    const char *port;    // if port = 0, quit
 } ServerInfo;
 
 struct message_buffer

@@ -10,18 +10,20 @@
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
-    printf("Connecting to: %i %s\n", port, ip);
-
     client = socket_create(port, ip);
+    // todo start displays
     if(socket_connect(client))
     {
-        handle_connection(client.fd);
+        return 1;
+        //        handle_connection(client.fd);
     }
-    else
-    {
-        return -1;
-    }
-    printf("Client fd: %i\n", client.fd);
+    //    else
+    //    {
+    //        printf("Error while connecting to server!\n");
+    //        return -1;
+    //    }
+    //    printf("End\n");
+    //    // todo display cleanup
     return 1;
 }
 
@@ -78,7 +80,6 @@ int handle_connection(int server_socket)
 {
     pthread_t receive_thread;
     pthread_t send_thread;
-
     // Create threads for receiving and sending messages
     if(pthread_create(&receive_thread, NULL, receive_messages, (void *)&server_socket))
     {
@@ -102,9 +103,9 @@ int handle_connection(int server_socket)
 void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
-    int running       = 1;
+    //    int running       = 1;
 
-    while(running)
+    while(1)
     {
         struct message new_message;
 
@@ -112,24 +113,24 @@ void *receive_messages(void *socket_fd)
         if(bytes_received < 0)
         {
             perror("recv");
-            running = 0;
+            break;
         }
         if(bytes_received == 0)
         {
             printf("Server closed connection\n");
-            running = 0;
+            break;
         }
 
         bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
         if(bytes_received < 0)
         {
             perror("recv");
-            running = 0;
+            break;
         }
         if(bytes_received == 0)
         {
             printf("Server closed connection\n");
-            running = 0;
+            break;
         }
         new_message.content_size = ntohs(new_message.content_size);
 
@@ -137,21 +138,18 @@ void *receive_messages(void *socket_fd)
         if(bytes_received < 0)
         {
             perror("read");
-            running = 0;
+            break;
         }
         if(bytes_received == 0)
         {
             printf("Server closed connection\n");
-            running = 0;
+            break;
         }
-        if(running)
-        {
-            new_message.content[bytes_received] = '\0';
-            printf("Received version from server: %i\n", new_message.version);
-            printf("Received version from server: %i\n", new_message.content_size);
-            printf("Received content from server: %s\n", new_message.content);
-        }
-        running = 0;
+        new_message.content[bytes_received] = '\0';
+        printf("Received version from server: %i\n", new_message.version);
+        printf("Received content from from server: %i\n", new_message.content_size);
+        // todo print to ncurses win
+        printf("Received content from server: %s\n", new_message.content);
     }
 
     return NULL;
@@ -159,6 +157,7 @@ void *receive_messages(void *socket_fd)
 
 void *send_messages(void *socket_fd)
 {
+    uint16_t       net_content_size;
     int            server_socket = *((int *)socket_fd);
     struct message msg;
 
@@ -166,13 +165,17 @@ void *send_messages(void *socket_fd)
     {
         uint16_t message_len;
         printf("Enter message:\n");
+        // todo mod this to use the ncurses window input (make a buffer that contains the characters typed and handle the last character == '\n' differently(?))
+        // todo handle the /q command for quitting back to main
         if(fgets(msg.content, BUFFER_SIZE, stdin) == NULL)
         {
+            // Handle error or end of input
             break;
         }
 
         msg.version = 1;
 
+        //                uint16_t message_len = htons((uint16_t)strlen(msg.content) + 1);
         message_len = (uint16_t)strlen(msg.content);
         printf("%hu\n", message_len);
 
@@ -181,16 +184,18 @@ void *send_messages(void *socket_fd)
             msg.content[message_len - 1] = '\0';
         }
 
+        // Ensure the message doesn't exceed maximum allowed content size
         if(message_len > BUFFER_SIZE - 1)
         {
             printf("Error: Message exceeds maximum allowed size.\n");
         }
 
         msg.content_size = message_len;
+        net_content_size = htons(msg.content_size);
 
         // Send the message components
         write(server_socket, &msg.version, sizeof(msg.version));
-        write(server_socket, &msg.content_size, sizeof(msg.content_size));
+        write(server_socket, &net_content_size, sizeof(net_content_size));
         write(server_socket, msg.content, message_len);
     }
     return NULL;

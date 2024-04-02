@@ -16,7 +16,7 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
 {
     WINDOW     *menu_win;
     ServerInfo  selected_server;
-    const char *options[]      = {"Join Server", "Choose Name", "Options", "Quit"};
+    const char *options[]      = {"Join Server", "Quit"};
     int         current_option = 0;
     //    int         selected_server_index = -1;    // Initialize to -1 as an invalid index
 
@@ -34,7 +34,7 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
         int ch;
         int res;
         box(menu_win, 0, 0);
-        for(int i = 0; i < 4; i++)
+        for(int i = 0; i < 2; i++)
         {
             if(i == current_option)
             {
@@ -54,10 +54,10 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
         switch(ch)
         {
             case 'w':
-                current_option = (current_option - 1 + 4) % 4;
+                current_option = (current_option - 1 + 2) % 2;
                 break;
             case 's':
-                current_option = (current_option + 1) % 4;
+                current_option = (current_option + 1) % 2;
                 break;
             case 'q':
                 delwin(menu_win);
@@ -88,9 +88,14 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
                         wclear(menu_win);
                         box(menu_win, 0, 0);
                         break;
-                    case 1:                                                 // choosename
-                        mvwprintw(menu_win, HEIGHT - 1, 2, "Nickname?");    // Print pressed key
-                        break;
+                    case 1:
+                        // quit logic
+                        selected_server.ip_address = servers[0];
+                        selected_server.port       = "quit";
+                        werase(menu_win);
+                        refresh();
+                        endwin();
+                        return selected_server;
                     default:
                         break;
                 }
