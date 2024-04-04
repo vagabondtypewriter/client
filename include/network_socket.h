@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 
 #define BUFFER_SIZE 1024
+#define QUIT_COMMAND "/q\n"
 
 struct client_information
 {

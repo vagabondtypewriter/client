@@ -1,4 +1,5 @@
 #include "../include/network_socket.h"
+#include "../include/gui.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -7,22 +8,28 @@
 #include <string.h>
 #include <unistd.h>
 
+// todo set up a volatile flag to terminate read thread
+// todo implement select into receive thread function so that the read call doesn't hang
+
+static volatile int receive_thread_running = 1;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
 int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
     client = socket_create(port, ip);
     // todo start displays
+    //    gui_client_send();
+    //    gui_client_receive();
     if(socket_connect(client))
     {
-        return 1;
-        //        handle_connection(client.fd);
+        handle_connection(client.fd);
     }
-    //    else
-    //    {
-    //        printf("Error while connecting to server!\n");
-    //        return -1;
-    //    }
-    //    printf("End\n");
+    else
+    {
+        printf("Error while connecting to server!\n");
+        return -1;
+    }
+    printf("End\n");
     //    // todo display cleanup
     return 1;
 }
@@ -103,53 +110,81 @@ int handle_connection(int server_socket)
 void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
-    //    int running       = 1;
 
-    while(1)
+    fd_set         readfds;
+    struct timeval tv;
+
+    // select set up fds
+    FD_ZERO(&readfds);
+    FD_SET(server_socket, &readfds);
+
+    // set up the timeout
+    tv.tv_sec  = 1;    // Set the timeout to 1 second
+    tv.tv_usec = 0;
+
+    while(receive_thread_running)
     {
-        struct message new_message;
+        // Use select for non-blocking read
+        int activity = select(server_socket + 1, &readfds, NULL, NULL, &tv);
 
-        ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
-        if(bytes_received < 0)
+        if(activity == -1)
         {
-            perror("recv");
-            break;
+            perror("select broke D:");
+            return NULL;
         }
-        if(bytes_received == 0)
+        if(activity == 0)
         {
-            printf("Server closed connection\n");
-            break;
+            // no activity, skip
         }
+        else
+        {
+            if(FD_ISSET(server_socket, &readfds))
+            {
+                // Read from socket
+                struct message new_message;
 
-        bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
-        if(bytes_received < 0)
-        {
-            perror("recv");
-            break;
-        }
-        if(bytes_received == 0)
-        {
-            printf("Server closed connection\n");
-            break;
-        }
-        new_message.content_size = ntohs(new_message.content_size);
+                ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
+                if(bytes_received < 0)
+                {
+                    perror("recv");
+                    break;
+                }
+                if(bytes_received == 0)
+                {
+                    printf("Server closed connection\n");
+                    break;
+                }
+                bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
+                if(bytes_received < 0)
+                {
+                    perror("recv");
+                    break;
+                }
+                if(bytes_received == 0)
+                {
+                    printf("Server closed connection\n");
+                    break;
+                }
+                new_message.content_size = ntohs(new_message.content_size);
 
-        bytes_received = read(server_socket, new_message.content, new_message.content_size);
-        if(bytes_received < 0)
-        {
-            perror("read");
-            break;
+                bytes_received = read(server_socket, new_message.content, new_message.content_size);
+                if(bytes_received < 0)
+                {
+                    perror("read");
+                    break;
+                }
+                if(bytes_received == 0)
+                {
+                    printf("Server closed connection\n");
+                    break;
+                }
+                new_message.content[bytes_received] = '\0';
+                printf("Received version from server: %i\n", new_message.version);
+                printf("Received content from from server: %i\n", new_message.content_size);
+                // todo print to ncurses win
+                printf("Received content from server: %s\n", new_message.content);
+            }
         }
-        if(bytes_received == 0)
-        {
-            printf("Server closed connection\n");
-            break;
-        }
-        new_message.content[bytes_received] = '\0';
-        printf("Received version from server: %i\n", new_message.version);
-        printf("Received content from from server: %i\n", new_message.content_size);
-        // todo print to ncurses win
-        printf("Received content from server: %s\n", new_message.content);
     }
 
     return NULL;
@@ -171,6 +206,14 @@ void *send_messages(void *socket_fd)
         {
             // Handle error or end of input
             break;
+        }
+        if(strcmp(msg.content, QUIT_COMMAND) == 0)
+        {
+            printf("QUIT\n");
+            close(server_socket);
+            // todo set some flag so that the read thread can terminate as well
+            receive_thread_running = 0;
+            return NULL;
         }
 
         msg.version = 1;

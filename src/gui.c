@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 // #define INPUT_HEIGHT 5
 
@@ -18,7 +19,6 @@ ServerInfo gui_main(int numServers, const char *servers[], const char *ports[])
     ServerInfo  selected_server;
     const char *options[]      = {"Join Server", "Quit"};
     int         current_option = 0;
-    //    int         selected_server_index = -1;    // Initialize to -1 as an invalid index
 
     initscr();
     cbreak();
@@ -178,6 +178,66 @@ int gui_server_list(int numServers, const char *servers[], const char *ports[])
     }
 }
 
+// gui client receive --> returns (?)
+// displays received information
+// keeps buffer for messages (?)
+// updates position for message positions (?)
+int gui_client_receive(void)
+{
+    int     running = 0;
+    WINDOW *display_menu_win;
+    WINDOW *input_menu_win;
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    display_menu_win = newwin(HEIGHT, WIDTH, BEGIN_Y, BEGIN_X);
+    input_menu_win   = newwin(OUTPUT_HEIGHT, WIDTH, HEIGHT, BEGIN_X);
+    wclear(display_menu_win);
+    wclear(input_menu_win);
+    box(display_menu_win, 0, 0);
+    box(input_menu_win, 0, 0);
+    wrefresh(display_menu_win);
+    wrefresh(input_menu_win);
+    while(running < MESSAGE_BUFFER_SIZE)
+    {
+        box(display_menu_win, 0, 0);
+        box(input_menu_win, 0, 0);
+        running++;
+        sleep(MESSAGE_BUFFER_SIZE);
+    }
+    return 1;
+}
+
+// gui client send --> returns (?)
+// keeps the current types characters until '\n' is sent
+// how can I do this ??
+// keep fgets, live update?
+int gui_client_send(void)
+{
+    int     running = 0;
+    WINDOW *menu_win;
+
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    menu_win = newwin(OUTPUT_HEIGHT, WIDTH, HEIGHT, BEGIN_X);
+    wclear(menu_win);
+    box(menu_win, 0, 0);
+    wrefresh(menu_win);
+    while(running < MESSAGE_BUFFER_SIZE)
+    {
+        box(menu_win, 0, 0);
+        running++;
+        sleep(MESSAGE_BUFFER_SIZE);
+    }
+    return 1;
+}
+
+// todo update the positioning of each new message, keep buffer (?) to hold old messages so they get printed to scrn?
 void display_output(WINDOW *output_win, const char *message)
 {
     werase(output_win);
@@ -185,6 +245,7 @@ void display_output(WINDOW *output_win, const char *message)
     wrefresh(output_win);
 }
 
+// todo change (? or it might be ok? depends if I want to keep a buffer or not)
 void display_input(WINDOW *input_win, const char *prompt)
 {
     werase(input_win);
