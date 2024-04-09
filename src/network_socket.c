@@ -8,8 +8,14 @@
 #include <string.h>
 #include <unistd.h>
 
-// todo set up a volatile flag to terminate read thread
-// todo implement select into receive thread function so that the read call doesn't hang
+#define INPUT_WINDOW_HEIGHT 3
+#define OUTPUT_WINDOW_HEIGHT (LINES - INPUT_WINDOW_HEIGHT - 1)
+#define OUTPUT_WINDOW_WIDTH COLS
+#define BACKSPACE 127
+static WINDOW *input_window;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static WINDOW *output_window;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// static char   *testVal1;         // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// static char   *testVal2;         // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 static volatile int receive_thread_running = 1;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
@@ -17,11 +23,22 @@ int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
     client = socket_create(port, ip);
-    // todo start displays
-    //    gui_client_send();
-    //    gui_client_receive();
     if(socket_connect(client))
     {
+        initscr();
+        cbreak();
+        noecho();
+        keypad(stdscr, TRUE);
+
+        output_window = newwin(OUTPUT_WINDOW_HEIGHT, OUTPUT_WINDOW_WIDTH, 0, 0);
+        //        box(output_window, 0, 0);
+        scrollok(output_window, TRUE);
+        wrefresh(output_window);
+
+        input_window = newwin(INPUT_WINDOW_HEIGHT, OUTPUT_WINDOW_WIDTH, LINES - INPUT_WINDOW_HEIGHT, 0);
+        box(input_window, 0, 0);
+        wrefresh(input_window);
+
         handle_connection(client.fd);
     }
     else
@@ -30,7 +47,6 @@ int client_create(uint16_t port, const char *ip)
         return -1;
     }
     printf("End\n");
-    //    // todo display cleanup
     return 1;
 }
 
@@ -81,13 +97,10 @@ int socket_connect(struct client_information client)
     return 1;
 }
 
-//
-
 int handle_connection(int server_socket)
 {
     pthread_t receive_thread;
     pthread_t send_thread;
-    // Create threads for receiving and sending messages
     if(pthread_create(&receive_thread, NULL, receive_messages, (void *)&server_socket))
     {
         perror("Could not create receive thread");
@@ -100,7 +113,6 @@ int handle_connection(int server_socket)
         exit(EXIT_FAILURE);
     }
 
-    // Wait for threads to finish
     pthread_join(receive_thread, NULL);
     pthread_join(send_thread, NULL);
 
@@ -110,23 +122,20 @@ int handle_connection(int server_socket)
 void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
-
-    fd_set         readfds;
-    struct timeval tv;
-
-    // select set up fds
+    //    WINDOW *content_win;
+    fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(server_socket, &readfds);
 
-    // set up the timeout
-    tv.tv_sec  = 1;    // Set the timeout to 1 second
-    tv.tv_usec = 0;
+    //    content_win = newwin(OUTPUT_WINDOW_HEIGHT - 2, OUTPUT_WINDOW_WIDTH - 2, 2, 2);
+    //    box(content_win, 0, 0);
+    //    wclear(content_win);
+    //    scrollok(content_win, TRUE);
+    //    wrefresh(content_win);
 
     while(receive_thread_running)
     {
-        // Use select for non-blocking read
-        int activity = select(server_socket + 1, &readfds, NULL, NULL, &tv);
-
+        int activity = select(server_socket + 1, &readfds, NULL, NULL, NULL);
         if(activity == -1)
         {
             perror("select broke D:");
@@ -134,13 +143,17 @@ void *receive_messages(void *socket_fd)
         }
         if(activity == 0)
         {
-            // no activity, skip
+            // check for quit, handle
+            if(receive_thread_running == 0)
+            {
+                return NULL;
+            }
+            continue;
         }
-        else
+        if(activity >= 0)
         {
             if(FD_ISSET(server_socket, &readfds))
             {
-                // Read from socket
                 struct message new_message;
 
                 ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
@@ -151,18 +164,15 @@ void *receive_messages(void *socket_fd)
                 }
                 if(bytes_received == 0)
                 {
-                    printf("Server closed connection\n");
                     break;
                 }
                 bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
                 if(bytes_received < 0)
                 {
-                    perror("recv");
                     break;
                 }
                 if(bytes_received == 0)
                 {
-                    printf("Server closed connection\n");
                     break;
                 }
                 new_message.content_size = ntohs(new_message.content_size);
@@ -170,76 +180,105 @@ void *receive_messages(void *socket_fd)
                 bytes_received = read(server_socket, new_message.content, new_message.content_size);
                 if(bytes_received < 0)
                 {
-                    perror("read");
                     break;
                 }
                 if(bytes_received == 0)
                 {
-                    printf("Server closed connection\n");
                     break;
                 }
                 new_message.content[bytes_received] = '\0';
-                printf("Received version from server: %i\n", new_message.version);
-                printf("Received content from from server: %i\n", new_message.content_size);
-                // todo print to ncurses win
-                printf("Received content from server: %s\n", new_message.content);
+
+                // Scroll the window up by one line
+                wscrl(output_window, 1);
+
+                // Move the cursor to the bottom of the window
+                wmove(output_window, OUTPUT_WINDOW_HEIGHT - 2, 1);
+
+                // Print the new message
+                wprintw(output_window, "%s\n", new_message.content);
+
+                // Refresh the output window
+                wrefresh(output_window);
             }
         }
     }
-
+    //    wclear(content_win);
+    //    wrefresh(content_win);
     return NULL;
 }
 
 void *send_messages(void *socket_fd)
 {
-    uint16_t       net_content_size;
     int            server_socket = *((int *)socket_fd);
     struct message msg;
 
+    keypad(input_window, TRUE);
+
     while(1)
     {
-        uint16_t message_len;
-        printf("Enter message:\n");
-        // todo mod this to use the ncurses window input (make a buffer that contains the characters typed and handle the last character == '\n' differently(?))
-        // todo handle the /q command for quitting back to main
-        if(fgets(msg.content, BUFFER_SIZE, stdin) == NULL)
+        int  ch;
+        int  i = 0;
+        char input_buffer[BUFFER_SIZE];
+
+        wmove(input_window, 1, 1);
+        wprintw(input_window, "> ");
+
+        wrefresh(input_window);
+
+        wclrtoeol(input_window);
+        wrefresh(input_window);
+
+        while((ch = wgetch(input_window)) != '\n')
         {
-            // Handle error or end of input
-            break;
+            if(ch == ERR)
+            {
+                continue;
+            }
+            if(ch == KEY_BACKSPACE || ch == BACKSPACE)
+            {
+                if(i > 0)
+                {
+                    i--;
+                    waddch(input_window, '\b');
+                    waddch(input_window, ' ');
+                    waddch(input_window, '\b');
+                }
+            }
+            else
+            {
+                if(i < BUFFER_SIZE - 1)
+                {
+                    input_buffer[i++] = (char)ch;
+                    waddch(input_window, (chtype)ch);
+                }
+            }
         }
+
+        input_buffer[i] = '\0';
+
+        strcpy(msg.content, input_buffer);
+
         if(strcmp(msg.content, QUIT_COMMAND) == 0)
         {
-            printf("QUIT\n");
+            wclear(input_window);
+            wclear(output_window);
+            wrefresh(input_window);
+            wrefresh(output_window);
             close(server_socket);
-            // todo set some flag so that the read thread can terminate as well
             receive_thread_running = 0;
+            printf("WHEE\n\n");
             return NULL;
         }
 
-        msg.version = 1;
+        msg.version      = 1;
+        msg.content_size = (uint16_t)strlen(msg.content);
 
-        //                uint16_t message_len = htons((uint16_t)strlen(msg.content) + 1);
-        message_len = (uint16_t)strlen(msg.content);
-        printf("%hu\n", message_len);
-
-        if(msg.content[message_len - 1] == '\n')
+        if(write(server_socket, &msg.version, sizeof(msg.version)) < 0 || write(server_socket, &msg.content_size, sizeof(msg.content_size)) < 0 || write(server_socket, msg.content, msg.content_size) < 0)
         {
-            msg.content[message_len - 1] = '\0';
+            perror("Error sending message to server");
+            break;
         }
-
-        // Ensure the message doesn't exceed maximum allowed content size
-        if(message_len > BUFFER_SIZE - 1)
-        {
-            printf("Error: Message exceeds maximum allowed size.\n");
-        }
-
-        msg.content_size = message_len;
-        net_content_size = htons(msg.content_size);
-
-        // Send the message components
-        write(server_socket, &msg.version, sizeof(msg.version));
-        write(server_socket, &net_content_size, sizeof(net_content_size));
-        write(server_socket, msg.content, message_len);
     }
+
     return NULL;
 }

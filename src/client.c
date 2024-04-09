@@ -6,13 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// #define IP1 "192.168.0.165"
 #define IP1 "192.168.0.165"
 #define PORT1 "8080"
 #define IP2 "192.168.0.241"
 #define PORT2 "8036"
 #define IP3 "192.168.0.247"
 #define PORT3 "8081"
-#define TESTIP "127.0.0.1"
+#define TESTIP "192.168.0.84"
 #define TESTPORT "8080"
 #define NUMSERVERS 4
 
