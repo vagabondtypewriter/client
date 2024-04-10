@@ -239,7 +239,7 @@ void *send_messages(void *socket_fd)
         }
 
         msg.version      = 1;
-        msg.content_size = (uint16_t)strlen(msg.content);
+        msg.content_size = htons((uint16_t)strlen(msg.content));
 
         if(write(server_socket, &msg.version, sizeof(msg.version)) < 0 || write(server_socket, &msg.content_size, sizeof(msg.content_size)) < 0 || write(server_socket, msg.content, msg.content_size) < 0)
         {
