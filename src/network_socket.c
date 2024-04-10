@@ -14,8 +14,6 @@
 #define BACKSPACE 127
 static WINDOW *input_window;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static WINDOW *output_window;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-// static char   *testVal1;         // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-// static char   *testVal2;         // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 static volatile int receive_thread_running = 1;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
@@ -125,39 +123,9 @@ int handle_connection(int server_socket)
 void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
-    //    WINDOW *content_win;
-    //    fd_set readfds;
-    //    FD_ZERO(&readfds);
-    //    FD_SET(server_socket, &readfds);
-
-    //    content_win = newwin(OUTPUT_WINDOW_HEIGHT - 2, OUTPUT_WINDOW_WIDTH - 2, 2, 2);
-    //    box(content_win, 0, 0);
-    //    wclear(content_win);
-    //    scrollok(content_win, TRUE);
-    //    wrefresh(content_win);
 
     while(receive_thread_running)
     {
-        //        int activity = select(server_socket + 1, &readfds, NULL, NULL, NULL);
-        //        if(activity == -1)
-        //        {
-        //            perror("select broke D:");
-        //            return NULL;
-        //        }
-        //        if(activity == 0)
-        //        {
-        //             check for quit, handle
-        //            if(receive_thread_running == 0)
-        //            {
-        //                printf("WHEE2\n");
-        //                return NULL;
-        //            }
-        //            continue;
-        //        }
-        //        if(activity >= 0)
-        //        {
-        //            if(FD_ISSET(server_socket, &readfds))
-        //            {
         struct message new_message;
 
         ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
@@ -191,21 +159,11 @@ void *receive_messages(void *socket_fd)
             break;
         }
         new_message.content[bytes_received] = '\0';
-
-        // Scroll the window up by one line
         wscrl(output_window, 1);
-
-        // Move the cursor to the bottom of the window
         wmove(output_window, OUTPUT_WINDOW_HEIGHT - 2, 1);
-
-        // Print the new message
         wprintw(output_window, "%s\n", new_message.content);
-
-        // Refresh the output window
         wrefresh(output_window);
     }
-    //        }
-    //    }
     return NULL;
 }
 
@@ -213,7 +171,6 @@ void *send_messages(void *socket_fd)
 {
     int            server_socket = *((int *)socket_fd);
     struct message msg;
-
     keypad(input_window, TRUE);
 
     while(1)
