@@ -13,7 +13,7 @@
 #define PORT2 "8036"
 #define IP3 "192.168.0.247"
 #define PORT3 "8081"
-#define TESTIP "192.168.0.84"
+#define TESTIP "127.0.0.1"
 #define TESTPORT "8080"
 #define NUMSERVERS 4
 

@@ -23,7 +23,7 @@ int client_create(uint16_t port, const char *ip)
 {
     struct client_information client;
     client = socket_create(port, ip);
-    if(socket_connect(client))
+    if(socket_connect(client) == 1)
     {
         initscr();
         cbreak();
@@ -40,6 +40,9 @@ int client_create(uint16_t port, const char *ip)
         wrefresh(input_window);
 
         handle_connection(client.fd);
+        wrefresh(input_window);
+        wrefresh(output_window);
+        refresh();
     }
     else
     {
@@ -123,9 +126,9 @@ void *receive_messages(void *socket_fd)
 {
     int server_socket = *((int *)socket_fd);
     //    WINDOW *content_win;
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(server_socket, &readfds);
+    //    fd_set readfds;
+    //    FD_ZERO(&readfds);
+    //    FD_SET(server_socket, &readfds);
 
     //    content_win = newwin(OUTPUT_WINDOW_HEIGHT - 2, OUTPUT_WINDOW_WIDTH - 2, 2, 2);
     //    box(content_win, 0, 0);
@@ -135,75 +138,74 @@ void *receive_messages(void *socket_fd)
 
     while(receive_thread_running)
     {
-        int activity = select(server_socket + 1, &readfds, NULL, NULL, NULL);
-        if(activity == -1)
+        //        int activity = select(server_socket + 1, &readfds, NULL, NULL, NULL);
+        //        if(activity == -1)
+        //        {
+        //            perror("select broke D:");
+        //            return NULL;
+        //        }
+        //        if(activity == 0)
+        //        {
+        //             check for quit, handle
+        //            if(receive_thread_running == 0)
+        //            {
+        //                printf("WHEE2\n");
+        //                return NULL;
+        //            }
+        //            continue;
+        //        }
+        //        if(activity >= 0)
+        //        {
+        //            if(FD_ISSET(server_socket, &readfds))
+        //            {
+        struct message new_message;
+
+        ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
+        if(bytes_received < 0)
         {
-            perror("select broke D:");
-            return NULL;
+            perror("recv");
+            break;
         }
-        if(activity == 0)
+        if(bytes_received == 0)
         {
-            // check for quit, handle
-            if(receive_thread_running == 0)
-            {
-                return NULL;
-            }
-            continue;
+            break;
         }
-        if(activity >= 0)
+        bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
+        if(bytes_received < 0)
         {
-            if(FD_ISSET(server_socket, &readfds))
-            {
-                struct message new_message;
-
-                ssize_t bytes_received = read(server_socket, &new_message.version, sizeof(new_message.version));
-                if(bytes_received < 0)
-                {
-                    perror("recv");
-                    break;
-                }
-                if(bytes_received == 0)
-                {
-                    break;
-                }
-                bytes_received = read(server_socket, &new_message.content_size, sizeof(new_message.content_size));
-                if(bytes_received < 0)
-                {
-                    break;
-                }
-                if(bytes_received == 0)
-                {
-                    break;
-                }
-                new_message.content_size = ntohs(new_message.content_size);
-
-                bytes_received = read(server_socket, new_message.content, new_message.content_size);
-                if(bytes_received < 0)
-                {
-                    break;
-                }
-                if(bytes_received == 0)
-                {
-                    break;
-                }
-                new_message.content[bytes_received] = '\0';
-
-                // Scroll the window up by one line
-                wscrl(output_window, 1);
-
-                // Move the cursor to the bottom of the window
-                wmove(output_window, OUTPUT_WINDOW_HEIGHT - 2, 1);
-
-                // Print the new message
-                wprintw(output_window, "%s\n", new_message.content);
-
-                // Refresh the output window
-                wrefresh(output_window);
-            }
+            break;
         }
+        if(bytes_received == 0)
+        {
+            break;
+        }
+        new_message.content_size = ntohs(new_message.content_size);
+
+        bytes_received = read(server_socket, new_message.content, new_message.content_size);
+        if(bytes_received < 0)
+        {
+            break;
+        }
+        if(bytes_received == 0)
+        {
+            break;
+        }
+        new_message.content[bytes_received] = '\0';
+
+        // Scroll the window up by one line
+        wscrl(output_window, 1);
+
+        // Move the cursor to the bottom of the window
+        wmove(output_window, OUTPUT_WINDOW_HEIGHT - 2, 1);
+
+        // Print the new message
+        wprintw(output_window, "%s\n", new_message.content);
+
+        // Refresh the output window
+        wrefresh(output_window);
     }
-    //    wclear(content_win);
-    //    wrefresh(content_win);
+    //        }
+    //    }
     return NULL;
 }
 
@@ -216,7 +218,6 @@ void *send_messages(void *socket_fd)
 
     while(1)
     {
-        int  ch;
         int  i = 0;
         char input_buffer[BUFFER_SIZE];
 
@@ -228,8 +229,20 @@ void *send_messages(void *socket_fd)
         wclrtoeol(input_window);
         wrefresh(input_window);
 
-        while((ch = wgetch(input_window)) != '\n')
+        while(1)
         {
+            int ch;
+
+            ch = wgetch(input_window);
+            if(ch == '\n')
+            {
+                if(i == 0)
+                {
+                    continue;
+                }
+                input_buffer[i] = '\0';
+                break;
+            }
             if(ch == ERR)
             {
                 continue;
@@ -253,8 +266,6 @@ void *send_messages(void *socket_fd)
                 }
             }
         }
-
-        input_buffer[i] = '\0';
 
         strcpy(msg.content, input_buffer);
 
