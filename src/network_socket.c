@@ -163,6 +163,7 @@ void *send_messages(void *socket_fd)
     int            server_socket = *((int *)socket_fd);
     struct message msg;
     uint16_t message_len;
+    uint16_t net_content_size;
 
     while(1)
     {
@@ -191,7 +192,7 @@ void *send_messages(void *socket_fd)
         }
 
         msg.content_size          = message_len;
-        uint16_t net_content_size = htons(msg.content_size);
+        net_content_size = htons(msg.content_size);
 
         // Send the message components
         write(server_socket, &msg.version, sizeof(msg.version));
