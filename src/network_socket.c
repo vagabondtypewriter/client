@@ -163,10 +163,11 @@ void *send_messages(void *socket_fd)
     int            server_socket = *((int *)socket_fd);
     struct message msg;
     uint16_t message_len;
-    uint16_t net_content_size;
+
 
     while(1)
     {
+        uint16_t net_content_size;
         printf("Enter message:\n");
         if(fgets(msg.content, BUFFER_SIZE, stdin) == NULL)
         {
