@@ -150,9 +150,9 @@ void *receive_messages(void *socket_fd)
         }
         new_message.content[bytes_received] = '\0';
         //            printf("Stored in message struct: \n");
-        printf("Received version from server: %i\n", new_message.version);
-        printf("Received content from from server: %i\n", new_message.content_size);
-        printf("Received content from server: %s\n", new_message.content);
+        //        printf("Received version from server: %i\n", new_message.version);
+        //        printf("Received content from from server: %i\n", new_message.content_size);
+        printf("%s\n", new_message.content);
     }
 
     return NULL;
@@ -162,6 +162,7 @@ void *send_messages(void *socket_fd)
 {
     int            server_socket = *((int *)socket_fd);
     struct message msg;
+    uint16_t message_len;
 
     while(1)
     {
@@ -175,7 +176,7 @@ void *send_messages(void *socket_fd)
         msg.version = 1;
 
         //                uint16_t message_len = htons((uint16_t)strlen(msg.content) + 1);
-        uint16_t message_len = (uint16_t)strlen(msg.content);
+        message_len = (uint16_t)strlen(msg.content);
         printf("%hu\n", message_len);
 
         if(msg.content[message_len - 1] == '\n')
