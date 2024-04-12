@@ -12,35 +12,37 @@ void *send_messages(void *socket_fd);
 
 int client_create(uint16_t port, const char *ip)
 {
-    struct client_information client;
+    struct client_information *client;
     printf("FROM network_socket.C %i %s\n", port, ip);
 
-    //     create socket
-    client = socket_create(port, ip);
+    // Allocate memory for the client structure
+    client = (struct client_information *)malloc(sizeof(struct client_information));
+    if(client == NULL)
+    {
+        perror("Memory allocation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // create socket
+    socket_create(client, port, ip);
     if(socket_connect(client))
     {
-        handle_connection(client.fd);
+        handle_connection(client);
+        free(client);    // Free client after handling connection
     }
     else
     {
+        free(client);
         return -1;
     }
-    printf("Client fd: %i\n", client.fd);
     return 1;
 }
 
-struct client_information socket_create(uint16_t port, const char *ip)
+void socket_create(struct client_information *client, uint16_t port, const char *ip)
 {
-    int                       sockfd;
-    struct sockaddr_in        server_addr;
-    struct client_information newClient;
+    int                sockfd;
+    struct sockaddr_in server_addr;
 
-#ifndef SOCK_CLOEXEC
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wunused-macros"
-    #define SOCK_CLOEXEC 0
-    #pragma GCC diagnostic pop
-#endif
     sockfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 
     if(sockfd == -1)
@@ -58,15 +60,13 @@ struct client_information socket_create(uint16_t port, const char *ip)
         exit(EXIT_FAILURE);
     }
 
-    newClient.fd         = sockfd;
-    newClient.serverAddr = server_addr;
-
-    return newClient;
+    client->fd         = sockfd;
+    client->serverAddr = server_addr;
 }
 
-int socket_connect(struct client_information client)
+int socket_connect(const struct client_information *client)
 {
-    if(connect(client.fd, (struct sockaddr *)&(client.serverAddr), sizeof(client.serverAddr)) == -1)
+    if(connect(client->fd, (const struct sockaddr *)&(client->serverAddr), sizeof(client->serverAddr)) == -1)
     {
         perror("Connection failed");
         return -1;
@@ -76,24 +76,22 @@ int socket_connect(struct client_information client)
     return 1;
 }
 
-//
-
-int handle_connection(int server_socket)
+int handle_connection(struct client_information *client)
 {
     pthread_t receive_thread;
     pthread_t send_thread;
 
     // Create threads for receiving and sending messages
-    if(pthread_create(&receive_thread, NULL, receive_messages, (void *)&server_socket))
+    if(pthread_create(&receive_thread, NULL, receive_messages, (void *)&client->fd))
     {
         perror("Could not create receive thread");
-        exit(EXIT_FAILURE);
+        return -1;    // Return an error code or handle appropriately
     }
 
-    if(pthread_create(&send_thread, NULL, send_messages, (void *)&server_socket))
+    if(pthread_create(&send_thread, NULL, send_messages, (void *)&client->fd))
     {
         perror("Could not create send thread");
-        exit(EXIT_FAILURE);
+        return -1;    // Return an error code or handle appropriately
     }
 
     // Wait for threads to finish
@@ -163,8 +161,6 @@ void *send_messages(void *socket_fd)
     int            server_socket = *((int *)socket_fd);
     struct message msg;
 
-
-
     while(1)
     {
         uint16_t message_len;
@@ -180,7 +176,7 @@ void *send_messages(void *socket_fd)
 
         //                uint16_t message_len = htons((uint16_t)strlen(msg.content) + 1);
         message_len = (uint16_t)strlen(msg.content);
-        printf("%hu\n", message_len);
+//        printf("%hu\n", message_len);
 
         if(msg.content[message_len - 1] == '\n')
         {
@@ -193,7 +189,7 @@ void *send_messages(void *socket_fd)
             printf("Error: Message exceeds maximum allowed size.\n");
         }
 
-        msg.content_size          = message_len;
+        msg.content_size = message_len;
         net_content_size = htons(msg.content_size);
 
         // Send the message components
